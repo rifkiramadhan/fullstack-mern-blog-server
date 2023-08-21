@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 // Create Schema
 const userSchema = new mongoose.Schema(
@@ -115,6 +116,21 @@ userSchema.pre('save', async function (next) {
 // Match Password
 userSchema.methods.isPasswordMatched = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Verify Account
+userSchema.methods.createAccountVerificationToken = async function () {
+  // Create a Token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  this.accountVerificationToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
+
+  // 10 Minutes
+  this.accountVerificationTokenExpires = Date.now() + 30 * 60 * 1000;
+
+  return verificationToken;
 };
 
 // Compile schema into model

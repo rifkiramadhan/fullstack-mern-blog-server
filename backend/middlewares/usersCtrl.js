@@ -1,7 +1,9 @@
 const expressAsyncHandler = require('express-async-handler');
-const generateToken = require('../../config/token/generateToken');
-const User = require('../../model/user/User');
-const validateMongodbId = require('../../utils/validateMongodbID');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+const generateToken = require('../config/token/generateToken');
+const User = require('../model/user/User');
+const validateMongodbId = require('../utils/validateMongodbID');
 
 //-------------------------------------
 // Register
@@ -255,7 +257,81 @@ const unBlockUserCtrl = expressAsyncHandler(async (req, res) => {
   res.json(user);
 });
 
+//-------------------------------------
+// Generate Email Verification Token
+//-------------------------------------
+const generateVerificationTokenCtrl = expressAsyncHandler(async (req, res) => {
+  const loginUserId = req.user.id;
+  const user = await User.findById(loginUserId);
+
+  console.log(user);
+  try {
+    // Generate Token
+    const verificationToken = await user.createAccountVerificationToken();
+
+    // Save The User
+    await user.save();
+
+    console.log(verificationToken);
+
+    // Create Transport
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'riifkiramadhan2@gmail.com',
+        pass: process.env.PASSWORD_MAILER,
+      },
+    });
+
+    const resetURL = `if you where requested to verify your account, verify now within 10 minutes. otherwise ignore this message <a href="http://localhost:3000/verify-account/${verificationToken}">Click to verify account</a>`;
+
+    // Message Obj
+    const message = {
+      to: 'rrxportal07@gmail.com',
+      subject: 'My first Node js email sending',
+      html: `
+        <h3>My first Node js email sending</h3>
+        <p>${resetURL}</p>
+      `,
+    };
+
+    // Send the Email
+    const info = await transporter.sendMail(message);
+    res.status(200).json(resetURL);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Email could not be sent' });
+  }
+});
+
+//-------------------------------------
+// Account Verification
+//-------------------------------------
+const accountVerificationCtrl = expressAsyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  // Find This User By Token
+  const userFound = await User.findOne({
+    accountVerificationToken: hashedToken,
+    accountVerificationTokenExpires: { $gt: new Date() },
+  });
+
+  if (!userFound) throw new Error('Token Expired, Try again later');
+
+  // Update The Property to true
+  userFound.isAccountVerified = true;
+  userFound.accountVerificationToken = undefined;
+  userFound.accountVerificationTokenExpires = undefined;
+  await userFound.save();
+
+  res.json(userFound);
+});
+
 module.exports = {
+  generateVerificationTokenCtrl,
   userRegisterCtrl,
   loginUserCtrl,
   fetchUsersCtrl,
@@ -268,4 +344,5 @@ module.exports = {
   unfollowUserCtrl,
   blockUserCtrl,
   unBlockUserCtrl,
+  accountVerificationCtrl,
 };
