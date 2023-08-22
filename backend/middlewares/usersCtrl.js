@@ -330,7 +330,79 @@ const accountVerificationCtrl = expressAsyncHandler(async (req, res) => {
   res.json(userFound);
 });
 
+//-------------------------------------
+// Forget Token Generator
+//-------------------------------------
+const forgetPasswordToken = expressAsyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({ message: 'User Not Found' });
+  }
+
+  try {
+    const token = await user.createPasswordResetToken();
+    await user.save();
+
+    // Inisialisasi nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'riifkiramadhan2@gmail.com',
+        pass: process.env.PASSWORD_MAILER,
+      },
+    });
+
+    const resetURL = `If you requested to reset your password, reset now within 10 minutes. Otherwise ignore this message <a href="http://localhost:3000/reset-password/${token}">Click to verify account</a>`;
+
+    const message = {
+      to: email,
+      subject: 'Reset Password',
+      html: `
+          <h3>Reset Password</h3>
+          <p>${resetURL}</p>
+          `,
+    };
+
+    await transporter.sendMail(message);
+    res.json({
+      message: `A verification message is successfully sent to ${user?.email}. Reset now within 10 minutes, ${resetURL}`,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Internal Server Error', error: error.message });
+  }
+});
+
+//-------------------------------------
+// Password Reset
+//-------------------------------------
+const passwordResetCtrl = expressAsyncHandler(async (req, res) => {
+  const { token, password } = req.body;
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  // Find This User By Token
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) throw new Error('Token Expired, try again later');
+
+  // Update/change the password
+  user.password = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+
+  res.json(user);
+});
+
 module.exports = {
+  forgetPasswordToken,
   generateVerificationTokenCtrl,
   userRegisterCtrl,
   loginUserCtrl,
@@ -345,4 +417,5 @@ module.exports = {
   blockUserCtrl,
   unBlockUserCtrl,
   accountVerificationCtrl,
+  passwordResetCtrl,
 };
