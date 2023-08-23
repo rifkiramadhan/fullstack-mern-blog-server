@@ -4,6 +4,7 @@ dotenv.config();
 const dbConnect = require('./config/db/dbConnect');
 const usersRoute = require('./route/users/usersRoute');
 const { errorHandler, notFound } = require('./middlewares/error/errorHandler');
+const postRoute = require('./route/posts/postsRoute');
 const app = express();
 
 // DB Connect
@@ -14,6 +15,9 @@ app.use(express.json());
 
 // Users Route
 app.use('/api/users', usersRoute);
+
+// Post Route
+app.use('/api/posts', postRoute);
 
 // Err Handler
 app.use(notFound);
