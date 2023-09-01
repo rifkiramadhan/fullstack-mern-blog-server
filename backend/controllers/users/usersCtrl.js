@@ -300,7 +300,7 @@ const generateVerificationTokenCtrl = expressAsyncHandler(async (req, res) => {
     };
 
     // Send the Email
-    const info = await transporter.sendMail(message);
+    await transporter.sendMail(message);
     res.status(200).json(resetURL);
   } catch (error) {
     console.log(error);

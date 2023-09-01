@@ -2,9 +2,12 @@ const express = require('express');
 const dotenv = require('dotenv');
 dotenv.config();
 const dbConnect = require('./config/db/dbConnect');
-const usersRoute = require('./route/users/usersRoute');
+const usersRoutes = require('./route/users/usersRoutes');
 const { errorHandler, notFound } = require('./middlewares/error/errorHandler');
-const postRoute = require('./route/posts/postsRoute');
+const postsRoutes = require('./route/posts/postsRoutes');
+const commentsRoutes = require('./route/comments/commentsRoutes');
+const emailMsgRoutes = require('./route/emailMsgRoutes/emailMsgRoutes');
+const categoriesRoutes = require('./route/categories/categoriesRoutes');
 const app = express();
 
 // DB Connect
@@ -14,10 +17,19 @@ dbConnect();
 app.use(express.json());
 
 // Users Route
-app.use('/api/users', usersRoute);
+app.use('/api/users', usersRoutes);
 
 // Post Route
-app.use('/api/posts', postRoute);
+app.use('/api/posts', postsRoutes);
+
+// Comment Route
+app.use('/api/comments', commentsRoutes);
+
+// Email Msg Route
+app.use('/api/email', emailMsgRoutes);
+
+// Category Route
+app.use('/api/category', categoriesRoutes);
 
 // Err Handler
 app.use(notFound);
