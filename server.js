@@ -1,5 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const cors = require('cors');
 dotenv.config();
 const dbConnect = require('./config/db/dbConnect');
 const usersRoutes = require('./route/users/usersRoutes');
@@ -15,6 +16,9 @@ dbConnect();
 
 // Middleware
 app.use(express.json());
+
+// Cors
+app.use(cors());
 
 // Users Route
 app.use('/api/users', usersRoutes);

@@ -12,6 +12,7 @@
 - yarn add bcryptjs
 - yarn add express-async-handler
 - yarn add jsonwebtoken
+- yarn add cors
 
 # Referensi Source Code:
 
